@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EMA Reader",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Seçili metni EMA Lightning (Türkçe, yapay zekâ sesi) ile yerel olarak sesli okur.",
   "permissions": ["storage", "offscreen"],
   "host_permissions": ["http://127.0.0.1/*"],
@@ -19,5 +19,11 @@
       "js": ["src/content/content.ts"],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "commands": {
+    "toggle-read": {
+      "suggested_key": { "default": "Alt+S" },
+      "description": "Seçili metni oku / durdur"
+    }
+  }
 }

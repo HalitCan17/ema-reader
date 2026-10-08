@@ -68,7 +68,7 @@ Denemek için:
 
 ```sh
 curl http://127.0.0.1:8765/health
-curl -X POST http://127.0.0.1:8765/say -H "Content-Type: application/json" -d "{\"text\":\"Merhaba dünya.\"}" -o deneme.wav
+curl -X POST http://127.0.0.1:8765/say -H "Content-Type: application/json" -d "{\"text\":\"Merhaba dünya.\", \"speed\": 1.0}" -o deneme.wav
 ```
 
 ## 3. Eklentiyi derle ve yükle
@@ -90,10 +90,17 @@ Kodu değiştirince `npm run build` çalıştırıp `chrome://extensions` sayfas
 
 1. Sunucunun çalıştığından emin ol (eklenti simgesine tıklayınca yeşil nokta görünür).
 2. Herhangi bir sayfada metni fareyle seç.
-3. Seçimin yanında çıkan **▶** balonuna tıkla. Metin cümle cümle okunur, okunan kelime sayfada sarıyla vurgulanır.
-4. Okuma sürerken başka bir metin seçip ▶'ye basarsan önceki okuma durur, yenisi başlar.
+3. Seçimin yanında çıkan **▶** balonuna tıkla ya da **Alt+S**'ye bas. Metin cümle cümle okunur, okunan kelime sayfada sarıyla vurgulanır.
+4. Okuma başlayınca sağ alt köşede küçük bir oynatıcı çıkar: **❚❚** duraklatır, **▶** devam ettirir, **■** durdurur.
+   Okuma sürerken **Alt+S** de okumayı durdurur.
+5. Okuma sürerken başka bir metin seçip okutursan önceki okuma durur, yenisi başlar.
 
-Eklenti simgesindeki pencereden balonu ve vurgulamayı açıp kapatabilir, sunucu portunu değiştirebilirsin.
+Eklenti simgesindeki pencereden okuma hızını (0,75x–2x) ayarlayabilir, balonu ve vurgulamayı açıp kapatabilir,
+sunucu portunu değiştirebilirsin. Hızı okuma sırasında değiştirirsen yeni hız birkaç cümle sonra devreye girer
+(sıradaki cümle önceden hazırlanmış olur).
+
+Alt+S başka bir eklentiyle çakışırsa Chrome kısayolu atamayabilir; `chrome://extensions/shortcuts` sayfasından
+EMA Reader için istediğin tuşu seçebilirsin.
 
 ## Geliştirme
 
@@ -114,8 +121,7 @@ CSS Custom Highlight API ile çizilir.
 - Yalnızca Türkçe ve tek ses.
 - CPU'da ilk cümle uzunluğuna göre bir-iki saniyede başlar; GPU'da neredeyse anında.
 - Kelime vurgusu tahminidir, uzun sayılar veya kısaltmalar okunurken biraz kayabilir.
-- Bu ilk sürümde hız ayarı, durdurma/duraklatma düğmesi, klavye kısayolu ve "Buradan sonrasını oku" yok.
-  Okumayı kesmek için şimdilik kısa bir metin seçip okutabilir veya sekmeyi yenileyebilirsin.
+- "Buradan sonrasını oku" henüz yok.
 - Sunucu kapalıysa balonda ve açılır pencerede "EMA sunucusu çalışmıyor" uyarısı çıkar.
 
 ## Lisans ve model

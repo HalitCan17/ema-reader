@@ -11,3 +11,7 @@ h1 { font-size: 15px; margin: 0; }
 label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 input[type="number"] { width: 80px; }
 .note { font-size: 11px; color: #6b7280; margin: 0; }
+.speed { display: flex; align-items: center; gap: 6px; }
+.speed input { width: 110px; }
+.speed output { width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+kbd { font: 10px/1 system-ui, sans-serif; border: 1px solid #d1d5db; border-radius: 3px; padding: 1px 4px; background: #f9fafb; }

@@ -13,7 +13,7 @@ import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 SAMPLE_RATE = 24000
 MAX_CHARS = 2000
@@ -59,6 +59,7 @@ app.add_middleware(
 
 class SayRequest(BaseModel):
     text: str
+    speed: float = Field(1.0, ge=0.25, le=4.0)
 
 
 def to_wav(audio: np.ndarray, sample_rate: int) -> bytes:
@@ -85,7 +86,7 @@ def say(req: SayRequest):
     if len(text) > MAX_CHARS:
         raise HTTPException(400, f"Metin çok uzun (en fazla {MAX_CHARS} karakter).")
     with lock:
-        speech = state["tts"].say(text, sample_rate=SAMPLE_RATE)
+        speech = state["tts"].say(text, speed=req.speed, sample_rate=SAMPLE_RATE)
     return Response(
         content=to_wav(speech.audio, SAMPLE_RATE),
         media_type="audio/wav",

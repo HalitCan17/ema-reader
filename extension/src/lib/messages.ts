@@ -2,6 +2,8 @@
 // İçerik betiği -> arka plan -> offscreen belgesi (sunucuya istek ve ses çalma),
 // offscreen -> arka plan -> içerik betiği (ilerleme olayları).
 
+export type ControlAction = "pause" | "resume" | "stop";
+
 /** İçerik betiğinden: bu cümleleri oku. */
 export interface ReadRequest {
   type: "read";
@@ -9,15 +11,23 @@ export interface ReadRequest {
   sentences: string[];
 }
 
-/** Arka plandan offscreen belgesine. */
-export interface OffscreenRead {
-  target: "offscreen";
-  type: "read";
+/** İçerik betiğinden: süren okumayı duraklat, devam ettir veya durdur. */
+export interface ControlRequest {
+  type: "control";
   readId: string;
-  tabId: number;
-  port: number;
-  sentences: string[];
+  action: ControlAction;
 }
+
+/** Arka plandan içerik betiğine: Alt+S kısayoluna basıldı. */
+export interface ToggleCommand {
+  type: "toggle";
+}
+
+/** Arka plandan offscreen belgesine. */
+export type OffscreenMessage =
+  | { target: "offscreen"; type: "read"; readId: string; tabId: number; port: number; speed: number; sentences: string[] }
+  | { target: "offscreen"; type: "control"; readId: string; action: ControlAction }
+  | { target: "offscreen"; type: "speed"; speed: number };
 
 /** Offscreen belgesinden içerik betiğine giden ilerleme olayları. */
 export type Progress =

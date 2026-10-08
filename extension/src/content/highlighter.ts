@@ -5,6 +5,9 @@ import type { TextMap } from "./textmap";
 
 const NAME = "ema-reader-word";
 let timer = 0;
+let tick: (() => void) | null = null;
+let began = 0; // duraklatılan süre kadar ileri kaydırılır
+let pausedAt: number | null = null;
 
 function ensureStyle() {
   if (document.getElementById("ema-reader-style")) return;
@@ -16,10 +19,27 @@ function ensureStyle() {
 
 export function clearHighlight() {
   cancelAnimationFrame(timer);
+  tick = null;
+  pausedAt = null;
   if ("highlights" in CSS) CSS.highlights.delete(NAME);
 }
 
-export function highlightSentence(map: TextMap, sentence: Span, duration: number) {
+/** Vurgulamayı sesle birlikte dondurur. */
+export function pauseHighlight() {
+  if (pausedAt !== null) return;
+  pausedAt = performance.now();
+  cancelAnimationFrame(timer);
+}
+
+export function resumeHighlight() {
+  if (pausedAt === null) return;
+  began += performance.now() - pausedAt;
+  pausedAt = null;
+  tick?.();
+}
+
+/** `paused` ise ses henüz çalmıyordur; vurgu devam edilene kadar bekler. */
+export function highlightSentence(map: TextMap, sentence: Span, duration: number, paused = false) {
   clearHighlight();
   if (!("highlights" in CSS)) return;
   ensureStyle();
@@ -37,9 +57,10 @@ export function highlightSentence(map: TextMap, sentence: Span, duration: number
     acc += w.end - w.start + 1;
   }
 
-  const began = performance.now();
+  began = performance.now();
   let shown = -1;
-  const tick = () => {
+  const step = () => {
+    if (pausedAt !== null) return;
     const elapsed = performance.now() - began;
     let i = shown;
     while (i + 1 < words.length && times[i + 1] <= elapsed) i++;
@@ -48,8 +69,10 @@ export function highlightSentence(map: TextMap, sentence: Span, duration: number
       const range = map.rangeFor(words[i].start, words[i].end);
       if (range) CSS.highlights.set(NAME, new Highlight(range));
     }
-    if (elapsed < duration * 1000) timer = requestAnimationFrame(tick);
+    if (elapsed < duration * 1000) timer = requestAnimationFrame(step);
     else CSS.highlights.delete(NAME);
   };
-  tick();
+  tick = step;
+  if (paused) pausedAt = began;
+  step();
 }

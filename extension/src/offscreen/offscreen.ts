@@ -1,11 +1,13 @@
 // Sunucudan sesi alıp Web Audio ile çalar. Offscreen belgesi eklentinin kendi
 // kaynağında çalıştığı için HTTPS sayfalardaki localhost kısıtlamalarına takılmaz.
-import type { OffscreenRead, Progress, ProgressEnvelope } from "../lib/messages";
+import type { ControlAction, OffscreenMessage, Progress, ProgressEnvelope } from "../lib/messages";
 import { SERVER_DOWN, serverUrl } from "../lib/settings";
 
 let ctx: AudioContext | null = null;
 let generation = 0;
 let source: AudioBufferSourceNode | null = null;
+let speed = 1;
+let active: { readId: string; tabId: number } | null = null;
 
 function report(tabId: number, progress: Progress) {
   const msg: ProgressEnvelope = { target: "background", tabId, progress };
@@ -18,14 +20,14 @@ async function synthesize(port: number, text: string): Promise<AudioBuffer> {
     res = await fetch(`${serverUrl(port)}/say`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, speed }),
     });
   } catch {
     throw new Error(SERVER_DOWN);
   }
   if (!res.ok) {
     const detail = await res.json().then((j) => j.detail, () => res.statusText);
-    throw new Error(`EMA sunucusu hata verdi: ${detail}`);
+    throw new Error(`EMA sunucusu hata verdi: ${typeof detail === "string" ? detail : res.statusText}`);
   }
   return ctx!.decodeAudioData(await res.arrayBuffer());
 }
@@ -40,9 +42,11 @@ function play(buffer: AudioBuffer): Promise<void> {
   });
 }
 
-/** Yeni bir okuma öncekini keser. */
+/** Süren okumayı keser; okuyan sekmeye bittiğini bildirir. */
 function cancelCurrent() {
   generation++;
+  if (active) report(active.tabId, { type: "done", readId: active.readId });
+  active = null;
   if (source) {
     try {
       source.stop();
@@ -51,11 +55,16 @@ function cancelCurrent() {
     }
     source = null;
   }
+  // Duraklatılmış bir okuma kesildiyse bağlamı yeniden aç.
+  if (ctx?.state === "suspended") ctx.resume();
 }
 
-async function read({ readId, tabId, port, sentences }: OffscreenRead) {
+async function read(msg: Extract<OffscreenMessage, { type: "read" }>) {
+  const { readId, tabId, port, sentences } = msg;
   cancelCurrent();
   const gen = generation;
+  active = { readId, tabId };
+  speed = msg.speed;
   ctx ??= new AudioContext();
   try {
     let next = synthesize(port, sentences[0]);
@@ -71,12 +80,26 @@ async function read({ readId, tabId, port, sentences }: OffscreenRead) {
       await play(buffer);
       if (gen !== generation) return;
     }
+    active = null;
     report(tabId, { type: "done", readId });
   } catch (err) {
-    if (gen === generation) report(tabId, { type: "error", readId, message: (err as Error).message });
+    if (gen !== generation) return;
+    active = null;
+    report(tabId, { type: "error", readId, message: (err as Error).message });
   }
 }
 
-chrome.runtime.onMessage.addListener((msg: OffscreenRead) => {
-  if (msg.target === "offscreen" && msg.type === "read") read(msg);
+function control(readId: string, action: ControlAction) {
+  if (!active || active.readId !== readId) return;
+  // Duraklatma tüm ses bağlamını askıya alır; sıradaki cümle hazır olsa da devam edilene kadar çalmaz.
+  if (action === "pause") ctx?.suspend();
+  else if (action === "resume") ctx?.resume();
+  else cancelCurrent();
+}
+
+chrome.runtime.onMessage.addListener((msg: OffscreenMessage) => {
+  if (msg.target !== "offscreen") return;
+  if (msg.type === "read") read(msg);
+  else if (msg.type === "control") control(msg.readId, msg.action);
+  else if (msg.type === "speed") speed = msg.speed;
 });

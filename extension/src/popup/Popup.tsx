@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DEFAULT_SETTINGS, SERVER_DOWN, loadSettings, saveSettings, serverUrl, type Settings } from "../lib/settings";
+import { DEFAULT_SETTINGS, MAX_SPEED, MIN_SPEED, SERVER_DOWN, loadSettings, saveSettings, serverUrl, type Settings } from "../lib/settings";
 
 type Health = { state: "checking" } | { state: "ok"; device: string } | { state: "down" };
 
@@ -47,6 +47,20 @@ export function Popup() {
       {health.state === "down" && <p className="error">{SERVER_DOWN}</p>}
 
       <label>
+        Hız
+        <span className="speed">
+          <input
+            type="range"
+            min={MIN_SPEED}
+            max={MAX_SPEED}
+            step={0.25}
+            value={settings.speed}
+            onChange={(e) => update({ speed: Number(e.target.value) })}
+          />
+          <output>{settings.speed.toLocaleString("tr")}x</output>
+        </span>
+      </label>
+      <label>
         Seçince ▶ balonu göster
         <input type="checkbox" checked={settings.bubble} onChange={(e) => update({ bubble: e.target.checked })} />
       </label>
@@ -67,6 +81,10 @@ export function Popup() {
           }}
         />
       </label>
+      <p className="note">
+        <kbd>Alt</kbd>+<kbd>S</kbd> seçili metni okur, okuma sürerken durdurur. Kısayolu chrome://extensions/shortcuts
+        sayfasından değiştirebilirsin.
+      </p>
       <p className="note">Metin bilgisayarından çıkmaz; ses yerel EMA Lightning sunucusunda üretilir.</p>
     </div>
   );
