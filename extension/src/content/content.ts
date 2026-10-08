@@ -21,6 +21,7 @@ function getBubble() {
     bubble.onPause = () => control("pause");
     bubble.onResume = () => control("resume");
     bubble.onStop = () => control("stop");
+    bubble.onSeek = (direction) => control(direction);
   }
   return bubble;
 }
@@ -76,16 +77,32 @@ function finish(error?: string) {
   else bubble?.finish();
 }
 
-function control(action: ControlAction) {
+function control(action: ControlAction, index?: number) {
   if (!current) return;
-  const msg: ControlRequest = { type: "control", readId: current.readId, action };
+  const msg: ControlRequest = { type: "control", readId: current.readId, action, index };
   chrome.runtime.sendMessage(msg).catch(() => {});
   if (action === "stop") return finish();
+  // Sarma ve atlama duraklatma durumunu değiştirmez; yeni konum sentence-start ile gelir.
+  if (action !== "pause" && action !== "resume") return;
   current.paused = action === "pause";
   if (current.paused) pauseHighlight();
   else resumeHighlight();
   getBubble().setMode(current.paused ? "paused" : "playing");
 }
+
+// Okurken metindeki bir cümleye tıklanınca okuma oradan sürer.
+document.addEventListener("click", (e) => {
+  if (!current || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+  if (bubble && e.composedPath().includes(bubble.host)) return;
+  if (!window.getSelection()?.isCollapsed) return; // sürükleyip seçim yapıldı
+  if ((e.target as Element).closest?.("a, button, input, textarea, select, [contenteditable]")) return;
+  const caret = document.caretPositionFromPoint?.(e.clientX, e.clientY);
+  if (!caret) return;
+  const at = current.map.indexAt(caret.offsetNode, caret.offset);
+  if (at === null) return;
+  const index = current.sentences.findIndex((s) => at < s.end);
+  if (index >= 0) control("jump", index);
+});
 
 document.addEventListener("mouseup", (e) => {
   if (!settings.bubble || (bubble && e.composedPath().includes(bubble.host))) return;
@@ -119,7 +136,7 @@ chrome.runtime.onMessage.addListener((msg: Progress | ContentCommand) => {
       if (!settings.highlight) break;
       // EMA'nın gerçek kelime zamanları; eşlenemezse süreden tahmin.
       const timings = alignTimings(sentence.text, msg.words ?? [], msg.duration) ?? estimateTimings(sentence.text, msg.duration);
-      highlightSentence(current.map, sentence, timings, msg.duration, current.paused);
+      highlightSentence(current.map, sentence, timings, msg.duration, msg.offset ?? 0, current.paused);
       break;
     }
     case "done":

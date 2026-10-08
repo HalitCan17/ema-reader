@@ -1,5 +1,5 @@
 // Seçimin yanında çıkan ▶ balonu. Okuma başlayınca sağ alt köşeye yerleşip
-// duraklat / devam / durdur düğmeleri olan küçük bir oynatıcıya dönüşür.
+// 5 sn geri / duraklat-devam / 5 sn ileri / durdur düğmeleri olan küçük bir oynatıcıya dönüşür.
 // Sayfanın CSS'i etkilemesin diye Shadow DOM içinde çizilir.
 
 const CSS_TEXT = `
@@ -17,7 +17,7 @@ button {
   background: #f59e0b; color: #111; display: grid; place-items: center; font-size: 12px;
 }
 button[hidden] { display: none; }
-button.stop { background: #4b5563; color: #fff; font-size: 10px; }
+button.stop, button.seek { background: #4b5563; color: #fff; font-size: 10px; }
 button:disabled { cursor: progress; opacity: .7; }
 .tag { font-size: 10px; opacity: .75; white-space: nowrap; }
 .msg { font-size: 12px; }
@@ -31,6 +31,7 @@ export class Bubble {
   private wrap: HTMLDivElement;
   private main: HTMLButtonElement;
   private stop: HTMLButtonElement;
+  private seekButtons: HTMLButtonElement[];
   private msg: HTMLSpanElement;
   private hideTimer = 0;
   private mode: Mode = "idle";
@@ -38,13 +39,16 @@ export class Bubble {
   onPause: () => void = () => {};
   onResume: () => void = () => {};
   onStop: () => void = () => {};
+  onSeek: (direction: "back" | "forward") => void = () => {};
 
   constructor() {
     this.host = document.createElement("ema-reader-bubble");
     const shadow = this.host.attachShadow({ mode: "closed" });
     shadow.innerHTML = `<style>${CSS_TEXT}</style>
       <div class="wrap" hidden>
+        <button type="button" class="seek" data-dir="back" title="5 sn geri" aria-label="5 saniye geri" hidden>−5</button>
         <button type="button" class="main"></button>
+        <button type="button" class="seek" data-dir="forward" title="5 sn ileri" aria-label="5 saniye ileri" hidden>+5</button>
         <button type="button" class="stop" title="Durdur" aria-label="Durdur" hidden>■</button>
         <span class="msg"></span>
         <span class="tag" title="Bu ses yapay zekâ ile üretilir">AI sesi</span>
@@ -52,6 +56,7 @@ export class Bubble {
     this.wrap = shadow.querySelector(".wrap")!;
     this.main = shadow.querySelector(".main")!;
     this.stop = shadow.querySelector(".stop")!;
+    this.seekButtons = [...shadow.querySelectorAll<HTMLButtonElement>(".seek")];
     this.msg = shadow.querySelector(".msg")!;
     // Tıklama seçimi silmesin.
     this.wrap.addEventListener("mousedown", (e) => e.preventDefault());
@@ -61,6 +66,7 @@ export class Bubble {
       else if (this.mode === "paused") this.onResume();
     });
     this.stop.addEventListener("click", () => this.onStop());
+    for (const b of this.seekButtons) b.addEventListener("click", () => this.onSeek(b.dataset.dir as "back" | "forward"));
     document.documentElement.append(this.host);
     this.setMode("idle");
   }
@@ -98,6 +104,7 @@ export class Bubble {
     this.main.setAttribute("aria-label", label);
     this.main.disabled = mode === "loading";
     this.stop.hidden = mode === "idle";
+    for (const b of this.seekButtons) b.hidden = mode === "idle";
     this.wrap.classList.toggle("player", mode !== "idle");
     if (mode !== "idle") {
       clearTimeout(this.hideTimer);

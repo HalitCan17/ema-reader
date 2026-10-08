@@ -39,8 +39,15 @@ export function resumeHighlight() {
   tick?.();
 }
 
-/** `paused` ise ses henüz çalmıyordur; vurgu devam edilene kadar bekler. */
-export function highlightSentence(map: TextMap, sentence: Span, timings: WordTiming[], duration: number, paused = false) {
+/** `offset`: ses cümlenin kaçıncı saniyesinden başladı (sarınca). `paused` ise vurgu devam edilene kadar bekler. */
+export function highlightSentence(
+  map: TextMap,
+  sentence: Span,
+  timings: WordTiming[],
+  duration: number,
+  offset = 0,
+  paused = false,
+) {
   clearHighlight();
   if (!("highlights" in CSS)) return;
   ensureStyle();
@@ -49,11 +56,10 @@ export function highlightSentence(map: TextMap, sentence: Span, timings: WordTim
   if (!words.length) return;
   const times = timings.map((t) => t.time * 1000);
 
-  began = performance.now();
+  began = performance.now() - offset * 1000;
   let shown = -1;
   const step = () => {
-    if (pausedAt !== null) return;
-    const elapsed = performance.now() - began;
+    const elapsed = (pausedAt ?? performance.now()) - began;
     let i = shown;
     while (i + 1 < words.length && times[i + 1] <= elapsed) i++;
     if (i !== shown) {
@@ -61,10 +67,11 @@ export function highlightSentence(map: TextMap, sentence: Span, timings: WordTim
       const range = map.rangeFor(words[i].start, words[i].end);
       if (range) CSS.highlights.set(NAME, new Highlight(range));
     }
+    if (pausedAt !== null) return; // duraklatılmışken o anki kelime görünür kalır
     if (elapsed < duration * 1000) timer = requestAnimationFrame(step);
     else CSS.highlights.delete(NAME);
   };
   tick = step;
-  if (paused) pausedAt = began;
+  if (paused) pausedAt = performance.now();
   step();
 }

@@ -91,8 +91,9 @@ Kodu değiştirince `npm run build` çalıştırıp `chrome://extensions` sayfas
 1. Sunucunun çalıştığından emin ol (eklenti simgesine tıklayınca yeşil nokta görünür).
 2. Herhangi bir sayfada metni fareyle seç.
 3. Seçimin yanında çıkan **▶** balonuna tıkla ya da **Alt+S**'ye bas. Metin cümle cümle okunur, okunan kelime sayfada sarıyla vurgulanır.
-4. Okuma başlayınca sağ alt köşede küçük bir oynatıcı çıkar: **❚❚** duraklatır, **▶** devam ettirir, **■** durdurur.
-   Okuma sürerken **Alt+S** de okumayı durdurur.
+4. Okuma başlayınca sağ alt köşede küçük bir oynatıcı çıkar: **−5** / **+5** beş saniye geri / ileri sarar,
+   **❚❚** duraklatır, **▶** devam ettirir, **■** durdurur. Okuma sürerken **Alt+S** de okumayı durdurur.
+   Okunan metindeki herhangi bir cümleye tıklarsan okuma o cümleden devam eder.
 5. Okuma sürerken başka bir metin seçip okutursan önceki okuma durur, yenisi başlar.
 6. Bir makaleyi baştan sona dinlemek için paragrafa sağ tıklayıp **Buradan sonrasını oku**'yu seç. O paragraftan
    itibaren sayfadaki paragraflar, başlıklar ve listeler sırayla okunur; menü, kenar çubuğu, alt bilgi ve gizli
@@ -109,7 +110,7 @@ EMA Reader için istediğin tuşu seçebilirsin.
 
 ```sh
 cd extension
-npm test           # cümle bölme ve kelime eşleme birim testleri
+npm test           # cümle bölme, kelime eşleme ve sarma birim testleri
 npm run typecheck  # tsc --noEmit
 ```
 

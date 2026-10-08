@@ -73,6 +73,14 @@ export class TextMap {
     return null;
   }
 
+  /** Sayfadaki bir noktanın (metin düğümü + konum) birleştirilmiş metindeki yeri; okunan metnin dışındaysa null. */
+  indexAt(node: Node, offset: number): number | null {
+    for (const s of this.segments) {
+      if (s.node === node && offset >= s.nodeOffset && offset <= s.nodeOffset + s.length) return s.textStart + offset - s.nodeOffset;
+    }
+    return null;
+  }
+
   /** Birleştirilmiş metindeki [start, end) aralığının sayfadaki Range karşılığı. */
   rangeFor(start: number, end: number): Range | null {
     const a = this.locate(start, false);
