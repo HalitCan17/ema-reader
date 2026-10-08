@@ -94,6 +94,9 @@ Kodu değiştirince `npm run build` çalıştırıp `chrome://extensions` sayfas
 4. Okuma başlayınca sağ alt köşede küçük bir oynatıcı çıkar: **❚❚** duraklatır, **▶** devam ettirir, **■** durdurur.
    Okuma sürerken **Alt+S** de okumayı durdurur.
 5. Okuma sürerken başka bir metin seçip okutursan önceki okuma durur, yenisi başlar.
+6. Bir makaleyi baştan sona dinlemek için paragrafa sağ tıklayıp **Buradan sonrasını oku**'yu seç. O paragraftan
+   itibaren sayfadaki paragraflar, başlıklar ve listeler sırayla okunur; menü, kenar çubuğu, alt bilgi ve gizli
+   öğeler atlanır. Okunan yer ekranın dışına çıkınca sayfa kendiliğinden kayar.
 
 Eklenti simgesindeki pencereden okuma hızını (0,75x–2x) ayarlayabilir, balonu ve vurgulamayı açıp kapatabilir,
 sunucu portunu değiştirebilirsin. Hızı okuma sırasında değiştirirsen yeni hız birkaç cümle sonra devreye girer
@@ -106,22 +109,25 @@ EMA Reader için istediğin tuşu seçebilirsin.
 
 ```sh
 cd extension
-npm test           # cümle bölme birim testleri
+npm test           # cümle bölme ve kelime eşleme birim testleri
 npm run typecheck  # tsc --noEmit
 ```
 
 Nasıl çalışır: içerik betiği seçimi cümlelere böler ve arka plana yollar. Arka plan bir **offscreen belgesi** açar;
 sunucuya istekleri bu belge atar ve sesi Web Audio ile çalar (HTTPS sayfalardan `localhost`'a doğrudan istek
-tarayıcı tarafından engellendiği için). Bir cümle çalarken sonraki önceden istenir. Kelime vurgusu, cümle süresinin
-karakter sayısına göre kelimelere paylaştırılmasıyla tahmin edilir ve sayfa DOM'u değiştirilmeden
-CSS Custom Highlight API ile çizilir.
+tarayıcı tarafından engellendiği için). Bir cümle çalarken sonraki önceden istenir. Kelime vurgusu, EMA'nın her kelime için verdiği
+gerçek okunma zamanlarıyla yapılır (sunucu bunları `X-Words` başlığında yollar). EMA kelimeleri normalleştirilmiş
+hâlde verdiği için ("1990" → "bin dokuz yüz doksan") eklenti bunları sayfadaki kelimelerle eşler; eşlenemeyen
+kelimeler aradaki süreye paylaştırılır. Vurgu sayfa DOM'u değiştirilmeden CSS Custom Highlight API ile çizilir.
 
 ## Bilinen sınırlar
 
 - Yalnızca Türkçe ve tek ses.
 - CPU'da ilk cümle uzunluğuna göre bir-iki saniyede başlar; GPU'da neredeyse anında.
-- Kelime vurgusu tahminidir, uzun sayılar veya kısaltmalar okunurken biraz kayabilir.
-- "Buradan sonrasını oku" henüz yok.
+- Kelime vurgusu gerçek zamanlara dayanır, ama uzun sayılar, kısaltmalar ve semboller birkaç kelimeye açıldığında
+  o kelimeler arasındaki geçiş yaklaşıktır.
+- "Buradan sonrasını oku" sayfanın yapısına göre çalışır; alışılmadık düzendeki sitelerde bir bölümü atlayabilir
+  veya fazladan okuyabilir.
 - Sunucu kapalıysa balonda ve açılır pencerede "EMA sunucusu çalışmıyor" uyarısı çıkar.
 
 ## Lisans ve model

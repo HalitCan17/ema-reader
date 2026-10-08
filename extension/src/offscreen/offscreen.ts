@@ -1,5 +1,6 @@
 // Sunucudan sesi alıp Web Audio ile çalar. Offscreen belgesi eklentinin kendi
 // kaynağında çalıştığı için HTTPS sayfalardaki localhost kısıtlamalarına takılmaz.
+import type { SpokenWord } from "../lib/align";
 import type { ControlAction, OffscreenMessage, Progress, ProgressEnvelope } from "../lib/messages";
 import { SERVER_DOWN, serverUrl } from "../lib/settings";
 
@@ -14,7 +15,23 @@ function report(tabId: number, progress: Progress) {
   chrome.runtime.sendMessage(msg).catch(() => {});
 }
 
-async function synthesize(port: number, text: string): Promise<AudioBuffer> {
+interface Spoken {
+  buffer: AudioBuffer;
+  words: SpokenWord[];
+}
+
+/** Sunucunun X-Words başlığı; eski sunucuda yoksa boş liste (vurgu tahmine düşer). */
+function parseWords(header: string | null): SpokenWord[] {
+  if (!header) return [];
+  try {
+    const words = JSON.parse(decodeURIComponent(header));
+    return Array.isArray(words) ? words : [];
+  } catch {
+    return [];
+  }
+}
+
+async function synthesize(port: number, text: string): Promise<Spoken> {
   let res: Response;
   try {
     res = await fetch(`${serverUrl(port)}/say`, {
@@ -29,7 +46,8 @@ async function synthesize(port: number, text: string): Promise<AudioBuffer> {
     const detail = await res.json().then((j) => j.detail, () => res.statusText);
     throw new Error(`EMA sunucusu hata verdi: ${typeof detail === "string" ? detail : res.statusText}`);
   }
-  return ctx!.decodeAudioData(await res.arrayBuffer());
+  const words = parseWords(res.headers.get("X-Words"));
+  return { buffer: await ctx!.decodeAudioData(await res.arrayBuffer()), words };
 }
 
 function play(buffer: AudioBuffer): Promise<void> {
@@ -69,14 +87,14 @@ async function read(msg: Extract<OffscreenMessage, { type: "read" }>) {
   try {
     let next = synthesize(port, sentences[0]);
     for (let i = 0; i < sentences.length; i++) {
-      const buffer = await next;
+      const { buffer, words } = await next;
       if (gen !== generation) return;
       // Bu cümle çalarken bir sonrakini şimdiden iste.
       if (i + 1 < sentences.length) {
         next = synthesize(port, sentences[i + 1]);
         next.catch(() => {}); // hata, sırası gelince yukarıda yakalanır
       }
-      report(tabId, { type: "sentence-start", readId, index: i, duration: buffer.duration });
+      report(tabId, { type: "sentence-start", readId, index: i, duration: buffer.duration, words });
       await play(buffer);
       if (gen !== generation) return;
     }

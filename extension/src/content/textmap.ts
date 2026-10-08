@@ -30,29 +30,37 @@ export class TextMap {
   }
 
   static fromRange(range: Range): TextMap {
-    const root = range.commonAncestorContainer;
+    return TextMap.fromRanges([range]);
+  }
+
+  /** Birden fazla aralığı (ör. art arda paragraflar) satır sonlarıyla birleştirir. */
+  static fromRanges(ranges: Range[]): TextMap {
     const segments: Segment[] = [];
     let text = "";
     let lastBlock: Element | null = null;
 
-    const add = (node: Text) => {
-      if (node.parentElement && SKIP.has(node.parentElement.tagName)) return;
-      if (!range.intersectsNode(node)) return;
-      const start = node === range.startContainer ? range.startOffset : 0;
-      const end = node === range.endContainer ? range.endOffset : node.data.length;
-      if (end <= start) return;
-      const block = blockOf(node);
-      // Farklı bloklar (paragraf, başlık, liste öğesi) arasına satır sonu koy.
-      if (text && block !== lastBlock) text += "\n";
-      lastBlock = block;
-      segments.push({ node, nodeOffset: start, textStart: text.length, length: end - start });
-      text += node.data.slice(start, end);
-    };
+    for (const range of ranges) {
+      const add = (node: Text) => {
+        if (node.parentElement && SKIP.has(node.parentElement.tagName)) return;
+        if (!range.intersectsNode(node)) return;
+        const start = node === range.startContainer ? range.startOffset : 0;
+        const end = node === range.endContainer ? range.endOffset : node.data.length;
+        if (end <= start) return;
+        const block = blockOf(node);
+        // Farklı bloklar (paragraf, başlık, liste öğesi) arasına satır sonu koy.
+        if (text && block !== lastBlock) text += "\n";
+        lastBlock = block;
+        segments.push({ node, nodeOffset: start, textStart: text.length, length: end - start });
+        text += node.data.slice(start, end);
+      };
 
-    if (root.nodeType === Node.TEXT_NODE) add(root as Text);
-    else {
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      for (let n = walker.nextNode(); n; n = walker.nextNode()) add(n as Text);
+      const root = range.commonAncestorContainer;
+      if (root.nodeType === Node.TEXT_NODE) add(root as Text);
+      else {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) add(n as Text);
+      }
+      lastBlock = null; // sonraki aralık her zaman yeni satırda başlar
     }
     return new TextMap(text, segments);
   }

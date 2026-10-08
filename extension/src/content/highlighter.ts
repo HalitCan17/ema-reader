@@ -1,5 +1,6 @@
 // Okunan kelimeyi CSS Custom Highlight API ile vurgular (sayfa DOM'u değişmez).
-// Model kelime zamanı vermediği için cümle süresi karakter sayısına göre kelimelere paylaştırılır.
+// Kelime zamanları lib/align.ts'te hesaplanır (EMA'nın verdiği gerçek zamanlar ya da tahmin).
+import type { WordTiming } from "../lib/align";
 import type { Span } from "../lib/sentences";
 import type { TextMap } from "./textmap";
 
@@ -39,23 +40,14 @@ export function resumeHighlight() {
 }
 
 /** `paused` ise ses henüz çalmıyordur; vurgu devam edilene kadar bekler. */
-export function highlightSentence(map: TextMap, sentence: Span, duration: number, paused = false) {
+export function highlightSentence(map: TextMap, sentence: Span, timings: WordTiming[], duration: number, paused = false) {
   clearHighlight();
   if (!("highlights" in CSS)) return;
   ensureStyle();
 
-  const words = [...sentence.text.matchAll(/\S+/g)].map((m) => ({
-    start: sentence.start + m.index,
-    end: sentence.start + m.index + m[0].length,
-  }));
+  const words = timings.map((t) => ({ start: sentence.start + t.start, end: sentence.start + t.end }));
   if (!words.length) return;
-  const total = words.reduce((n, w) => n + (w.end - w.start) + 1, 0);
-  const times: number[] = [];
-  let acc = 0;
-  for (const w of words) {
-    times.push((acc / total) * duration * 1000);
-    acc += w.end - w.start + 1;
-  }
+  const times = timings.map((t) => t.time * 1000);
 
   began = performance.now();
   let shown = -1;

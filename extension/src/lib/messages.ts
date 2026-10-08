@@ -1,6 +1,7 @@
 // Eklentinin parçaları arasındaki mesajlar.
 // İçerik betiği -> arka plan -> offscreen belgesi (sunucuya istek ve ses çalma),
 // offscreen -> arka plan -> içerik betiği (ilerleme olayları).
+import type { SpokenWord } from "./align";
 
 export type ControlAction = "pause" | "resume" | "stop";
 
@@ -18,10 +19,8 @@ export interface ControlRequest {
   action: ControlAction;
 }
 
-/** Arka plandan içerik betiğine: Alt+S kısayoluna basıldı. */
-export interface ToggleCommand {
-  type: "toggle";
-}
+/** Arka plandan içerik betiğine: Alt+S kısayoluna basıldı ya da sağ tık menüsünden "Buradan sonrasını oku" seçildi. */
+export type ContentCommand = { type: "toggle" } | { type: "read-from-here" };
 
 /** Arka plandan offscreen belgesine. */
 export type OffscreenMessage =
@@ -31,7 +30,7 @@ export type OffscreenMessage =
 
 /** Offscreen belgesinden içerik betiğine giden ilerleme olayları. */
 export type Progress =
-  | { type: "sentence-start"; readId: string; index: number; duration: number }
+  | { type: "sentence-start"; readId: string; index: number; duration: number; words: SpokenWord[] }
   | { type: "done"; readId: string }
   | { type: "error"; readId: string; message: string };
 

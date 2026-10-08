@@ -4,9 +4,11 @@ Yalnızca 127.0.0.1 üzerinde dinler. Seçili metni EMA Lightning ile seslendiri
 WAV olarak döndürür. Hiçbir metin bilgisayarın dışına çıkmaz.
 """
 import io
+import json
 import logging
 import threading
 import wave
+from urllib.parse import quote
 from contextlib import asynccontextmanager
 
 import numpy as np
@@ -52,7 +54,7 @@ app.add_middleware(
     allow_origin_regex=r"chrome-extension://.*",
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
-    expose_headers=["X-Duration"],
+    expose_headers=["X-Duration", "X-Words"],
     allow_private_network=True,
 )
 
@@ -73,6 +75,16 @@ def to_wav(audio: np.ndarray, sample_rate: int) -> bytes:
     return buf.getvalue()
 
 
+def words_header(speech) -> str:
+    """Kelimelerin okunduğu anlar: [[kelime, başlangıç, bitiş], ...] (saniye).
+
+    Kelimeler normalleştirilmiş hâlleridir ("5" -> "beş"); eşleme eklentide yapılır.
+    Başlıklar yalnızca ASCII taşıyabildiği için JSON yüzde kodlamasıyla gönderilir.
+    """
+    words = [[w.text, w.start, w.end] for w in getattr(speech, "words", ())]
+    return quote(json.dumps(words, ensure_ascii=False, separators=(",", ":")), safe="")
+
+
 @app.get("/health")
 def health():
     return {"ok": state["tts"] is not None, "device": state["device"], "sample_rate": SAMPLE_RATE}
@@ -90,5 +102,5 @@ def say(req: SayRequest):
     return Response(
         content=to_wav(speech.audio, SAMPLE_RATE),
         media_type="audio/wav",
-        headers={"X-Duration": f"{speech.duration:.3f}"},
+        headers={"X-Duration": f"{speech.duration:.3f}", "X-Words": words_header(speech)},
     )

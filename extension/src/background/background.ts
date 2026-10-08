@@ -1,4 +1,4 @@
-import type { ControlRequest, OffscreenMessage, ProgressEnvelope, ReadRequest, ToggleCommand } from "../lib/messages";
+import type { ContentCommand, ControlRequest, OffscreenMessage, ProgressEnvelope, ReadRequest } from "../lib/messages";
 import { loadSettings } from "../lib/settings";
 
 const OFFSCREEN_URL = "src/offscreen/offscreen.html";
@@ -58,6 +58,19 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
   if (command !== "toggle-read") return;
   const tabId = tab?.id ?? (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
   if (tabId === undefined) return;
-  const msg: ToggleCommand = { type: "toggle" };
+  const msg: ContentCommand = { type: "toggle" };
   chrome.tabs.sendMessage(tabId, msg).catch(() => {}); // chrome:// gibi sayfalarda içerik betiği yok
+});
+
+const READ_FROM_HERE = "read-from-here";
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({ id: READ_FROM_HERE, title: "Buradan sonrasını oku", contexts: ["page", "selection", "link"] });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== READ_FROM_HERE || tab?.id === undefined) return;
+  const msg: ContentCommand = { type: "read-from-here" };
+  // Tıklanan çerçeveye gönder; sağ tık o çerçevenin içerik betiğinde kaydedildi.
+  chrome.tabs.sendMessage(tab.id, msg, { frameId: info.frameId ?? 0 }).catch(() => {});
 });
