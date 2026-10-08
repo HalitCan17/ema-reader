@@ -1,0 +1,18 @@
+# Python
+server/.venv/
+__pycache__/
+*.pyc
+
+# Eklenti
+extension/node_modules/
+extension/dist/
+
+# Deneme çıktıları ve yerel dosyalar
+*.wav
+*.log
+.env
+.claude/
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
